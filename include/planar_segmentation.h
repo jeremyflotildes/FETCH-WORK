@@ -20,7 +20,10 @@
 #define CROP_PC_PLANAR_SEGMENTATION_H
 class planar_segmentation {
 public:
-    static pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extracted;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extracted;
     void extractOffPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr plane_seg_cloud);
+
+    planar_segmentation() : cloud_extracted(new pcl::PointCloud<pcl::PointXYZ>) { //initialize point cloud in the constructor -- solve errors (undefined references) with linkers across c++ files
+    }
 };
 #endif //CROP_PC_PLANAR_SEGMENTATION_H

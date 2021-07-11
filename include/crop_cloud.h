@@ -19,7 +19,9 @@
 #define CROP_PC_CROP_CLOUD_H
 class crop_cloud {
 public:
-    static pcl::PointCloud<pcl::PointXYZ>::Ptr plane_seg_cloud; //initialize new PointXYZ for plane segmentation
+    pcl::PointCloud<pcl::PointXYZ>::Ptr plane_seg_cloud; //initialize new PointXYZ for plane segmentation
     void crop(sensor_msgs::PointCloud2::Ptr input_cloud);
+    crop_cloud() : plane_seg_cloud(new pcl::PointCloud<pcl::PointXYZ>){ //initialize point cloud in the constructor -- solve errors (undefined references) with linkers across c++ files
+    }
 };
 #endif //CROP_PC_CROP_CLOUD_H
