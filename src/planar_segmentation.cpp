@@ -1,6 +1,6 @@
 //
 // Created by jeremy on 7/8/21.
-//
+// file that performs plane segmentation, then extracts objects off the plane
 
 #include "../include/planar_segmentation.h"
 void planar_segmentation::extractOffPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr plane_seg_cloud) {

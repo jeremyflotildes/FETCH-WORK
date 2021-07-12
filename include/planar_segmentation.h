@@ -1,4 +1,4 @@
-
+//header file that declares the class that will be used for planar segmentation and extraction off the plane
 
 #include <iostream>
 #include <pcl/ModelCoefficients.h>
@@ -20,7 +20,7 @@
 #define CROP_PC_PLANAR_SEGMENTATION_H
 class planar_segmentation {
 public:
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extracted;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extracted; //point cloud that will store the extracted objects' point cloud (the result of the planar segmentation and extraction off the plane)
     void extractOffPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr plane_seg_cloud);
 
     planar_segmentation() : cloud_extracted(new pcl::PointCloud<pcl::PointXYZ>) { //initialize point cloud in the constructor -- solve errors (undefined references) with linkers across c++ files

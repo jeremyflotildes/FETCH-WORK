@@ -1,3 +1,5 @@
+//main, unorganized file -- codebase that performs cropping, planar segmentation, extraction off plane, clustering, and broadcasting tf
+
 #include <iostream>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/point_types.h>

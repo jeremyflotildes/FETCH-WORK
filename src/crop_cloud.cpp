@@ -1,6 +1,6 @@
 //
 // Created by jeremy on 7/8/21.
-//
+// crops everything but the relevant plane with objects
 
 #include "../include/crop_cloud.h"
 void crop_cloud::crop(sensor_msgs::PointCloud2::Ptr input_cloud) {
