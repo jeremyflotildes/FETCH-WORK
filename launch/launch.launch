@@ -1,4 +1,5 @@
 <launch>
+    <param name ="/use_sim_time" value="true"/>
     <node
         pkg = "crop_pc" type = "extract_node" name = "extract_node" output = "screen">
     </node>

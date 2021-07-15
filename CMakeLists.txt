@@ -11,6 +11,9 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   roscpp
   std_msgs
+        moveit_core
+        moveit_ros_planning_interface
+        moveit_visual_tools
 )
 
 ## System dependencies are found with CMake's conventions
@@ -105,8 +108,10 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES crop_pc
-#  CATKIN_DEPENDS pcl_ros roscpp std_msgs
+#  CATKIN_DEPENDS pcl_ros roscpp std_msgs moveit_core moveit_ros_planning_interface moveit_visual_tools
 #  DEPENDS system_lib
+
+
 )
 
 ###########
@@ -133,7 +138,7 @@ include_directories(include
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
- add_executable(extract_node src/obj_recognition.cpp src/crop_cloud.cpp src/planar_segmentation.cpp src/cluster.cpp)
+ add_executable(extract_node src/obj_recognition.cpp src/crop_cloud.cpp src/planar_segmentation.cpp src/cluster.cpp src/moveit.cpp)
 ## add_executable(extract_node src/crop.cpp)
  ## add_executable(tf_broadcaster src/tf_broadcaster.cpp)
 

@@ -22,6 +22,7 @@
 #define CROP_PC_CLUSTER_H
 class cluster_extraction {
 public:
+    Eigen::Vector4d centroid;
     void cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extracted);
 };
 #endif //CROP_PC_CLUSTER_H

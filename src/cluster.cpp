@@ -3,6 +3,7 @@
 // function that extracts clusters, calculates their centroids, transforms centroids with respect to base_link, and broadcasts them
 
 #include "cluster.h"
+#include "moveit.h"
 void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extracted) { //fixed: "undefined reference to cluster_extraction::cluster" -> function requires parent class + scope operator
     // ---CREATING THE KDTREE OBJECT FOR THE SEARCH METHOD OF THE EXTRACTION---
     pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
@@ -18,7 +19,7 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
     ec.extract (cluster_indices);
 
     int j = 0;
-    Eigen::Vector4d centroid;
+    // Eigen::Vector4d centroid; --> commented out, needs to be a public variable so the moveit class can access it (from a different file) and make it a target
     tf::TransformBroadcaster br;
     tf::TransformListener listener;
 
@@ -34,12 +35,12 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
         std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size() << " data points." << std::endl;
 
         //compute + print centroid
-        pcl::compute3DCentroid(*cloud_cluster, centroid);
-        std::cout << centroid << std::endl;
+        pcl::compute3DCentroid(*cloud_cluster, cluster_extraction::centroid);
+        std::cout << cluster_extraction::centroid << std::endl;
 
         //broadcast
         tf::Transform transform;
-        transform.setOrigin(tf::Vector3(centroid(0), centroid(1), centroid(2)));
+        transform.setOrigin(tf::Vector3(cluster_extraction::centroid(0), cluster_extraction::centroid(1), cluster_extraction::centroid(2)));
         tf::Quaternion q;
         q.setRPY(0, 0, 0);
         transform.setRotation(q);
@@ -58,6 +59,7 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
             base_point.point.y = centroid_vec3[1];
             base_point.point.z = centroid_vec3[2];
             geometry_msgs::PointStamped centroid_wrt_base_link; //hold the centroid point transformed with respect to base_link
+            listener.waitForTransform("head_camera_rgb_optical_frame", "base_link", ros::Time(0), ros::Duration(0.5)); //give transform some time to be detected
             listener.transformPoint("/base_link", base_point, centroid_wrt_base_link);
             ROS_INFO("base_laser: (%.2f, %.2f. %.2f) -----> base_link: (%.2f, %.2f, %.2f) at time %.2f",
                      base_point.point.x, base_point.point.y, base_point.point.z,

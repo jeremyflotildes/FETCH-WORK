@@ -11,6 +11,7 @@
 #include "../include/planar_segmentation.h"
 #include "../include/crop_cloud.h"
 #include "../include/cluster.h"
+#include "../include/moveit.h"
 
 class subscribe_and_publish {
 public:
@@ -18,6 +19,8 @@ public:
     ros::Subscriber sub;
     ros::NodeHandle nh;
     tf::TransformListener listener;
+
+
 
     subscribe_and_publish() {
         // ---PUBLISH CROPPED CLOUD---
@@ -33,6 +36,7 @@ public:
         planar_segmentation extractObj; //initialize class to extract the objects off the plane
         cluster_extraction extractClusters;
 
+
         pcl::PCLPointCloud2 output_pcl_cloud;
         cropCloud.crop(input_cloud); //crop the input cloud from the subscribed data
         extractObj.extractOffPlane(cropCloud.plane_seg_cloud); //perform planar segmentation on cropped pcl and extract objects off the plane
@@ -42,13 +46,20 @@ public:
         pcl_conversions::fromPCL(output_pcl_cloud, publish_cloud); //convert PCL2 -> sensor_msgs point cloud
 
         pub.publish(publish_cloud);
+
     }
 };
 
 int main (int argc, char** argv) {
     ros::init(argc, argv, "crop_node");
     subscribe_and_publish sapObject;
-    ros::spin();
-
+    ros::AsyncSpinner spinner(1);
+    spinner.start();
+    moveGroup moveToCluster;
+    while(sapObject.nh.ok()) {
+        moveToCluster.graspObject();
+    }
+   // ros::spin();
+    ros::shutdown();
     return (0);
 }
