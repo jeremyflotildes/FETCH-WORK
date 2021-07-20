@@ -18,11 +18,20 @@
 #include <tf/transform_listener.h>
 #include <tf/transform_datatypes.h>
 
+#include <pcl/common/common.h>
+
 #ifndef CROP_PC_CLUSTER_H
 #define CROP_PC_CLUSTER_H
 class cluster_extraction {
 public:
     Eigen::Vector4d centroid;
+/*    static Eigen::Vector4f min;
+    static Eigen::Vector4f max;
+    static float length;
+    static float width;
+    static float height;*/
     void cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extracted);
+    cluster_extraction() {
+    }
 };
 #endif //CROP_PC_CLUSTER_H

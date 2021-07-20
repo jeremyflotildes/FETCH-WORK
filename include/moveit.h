@@ -16,14 +16,25 @@
 
 #include <tf/transform_listener.h>
 
+#include <actionlib/client/simple_action_client.h>
+#include <actionlib/client/terminal_state.h>
+#include "control_msgs/GripperCommandGoal.h"
+#include "control_msgs/GripperCommandAction.h"
+
 #ifndef CROP_PC_MOVEIT_H
 #define CROP_PC_MOVEIT_H
 class moveGroup {
 public:
     tf::TransformListener listener;
+    tf::StampedTransform cluster_transform;
+    ros::Publisher pub;
     void graspObject();
     void openGripper(trajectory_msgs::JointTrajectory& posture);
+    void closedGripper(trajectory_msgs::JointTrajectory& posture);
+    void addCollisionObject(moveit::planning_interface::PlanningSceneInterface& planning_scene_interface);
     void pick(moveit::planning_interface::MoveGroupInterface& move_group);
+    void closed_gripper();
+    void lowerGripper();
     moveGroup () {
 
     }

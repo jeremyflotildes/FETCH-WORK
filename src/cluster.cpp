@@ -23,6 +23,10 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
     tf::TransformBroadcaster br;
     tf::TransformListener listener;
 
+   /*  moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
+    std::vector<moveit_msgs::CollisionObject> collision_objects;
+    collision_objects.resize(7); */
+
     for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it) //iterate thru cluster_indices (each element of cluster_indices contains all the points of a cluster)
     {
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
@@ -38,6 +42,17 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
         pcl::compute3DCentroid(*cloud_cluster, cluster_extraction::centroid);
         std::cout << cluster_extraction::centroid << std::endl;
 
+        Eigen::Vector4f min;
+        Eigen::Vector4f max;
+        pcl::getMinMax3D(*cloud_cluster, min, max);
+
+        /*std::vector<float> min_vec3(cluster_extraction::min.data(), cluster_extraction::min.data() + cluster_extraction::min.rows() * cluster_extraction::min.cols());
+        std::vector<float> max_vec3(cluster_extraction::max.data(), cluster_extraction::max.data() + cluster_extraction::max.rows() * cluster_extraction::max.cols());
+        //convert to float and subtract to find dimensions, then pass dimensions to moveit.cpp -- doesn't work, undefined reference
+        cluster_extraction::length = max_vec3[0] - min_vec3[0];
+        cluster_extraction::width = max_vec3[1] - min_vec3[1];
+        cluster_extraction::height = max_vec3[2] - min_vec3[2];*/
+
         //broadcast
         tf::Transform transform;
         transform.setOrigin(tf::Vector3(cluster_extraction::centroid(0), cluster_extraction::centroid(1), cluster_extraction::centroid(2)));
@@ -51,6 +66,7 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
         //tf::TransformListener listener;
 
         tf::StampedTransform transform_base_link; //transform for base_link and cluster
+        geometry_msgs::PointStamped centroid_wrt_base_link; //hold the centroid point transformed with respect to base_link
         try {
             tf::Vector3 centroid_vec3 = transform.getOrigin(); //set centroid_vec3 to the centroid
             geometry_msgs::PointStamped base_point;
@@ -58,7 +74,6 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
             base_point.point.x = centroid_vec3[0]; //essentially convert the centroid to geometry_msgs::PointStamped
             base_point.point.y = centroid_vec3[1];
             base_point.point.z = centroid_vec3[2];
-            geometry_msgs::PointStamped centroid_wrt_base_link; //hold the centroid point transformed with respect to base_link
             listener.waitForTransform("head_camera_rgb_optical_frame", "base_link", ros::Time(0), ros::Duration(0.5)); //give transform some time to be detected
             listener.transformPoint("/base_link", base_point, centroid_wrt_base_link);
             ROS_INFO("base_laser: (%.2f, %.2f. %.2f) -----> base_link: (%.2f, %.2f, %.2f) at time %.2f",
@@ -67,11 +82,33 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
             transform_base_link.setOrigin(tf::Vector3(centroid_wrt_base_link.point.x,centroid_wrt_base_link.point.y, centroid_wrt_base_link.point.z));
             transform_base_link.setRotation(tf::Quaternion(0,0,0, 1));
             br.sendTransform(tf::StampedTransform(transform_base_link, ros::Time::now(), "base_link", "cluster_" + std::to_string(j + 1)));
+
         }
         catch (tf::TransformException ex) {
             ROS_ERROR("%s", ex.what());
             ros::Duration(1.0).sleep();
         }
+
+/*        //ADD CLUSTER AS OBJECT
+        collision_objects[j].header.frame_id = "gripper_link";
+        collision_objects[j].id = "cluster_1"; //+ std::to_string(j + 1);
+
+        collision_objects[j].primitives.resize(1);
+        collision_objects[j].primitives[0].type = collision_objects[0].primitives[0].BOX;
+        collision_objects[j].primitives[0].dimensions.resize(3);
+        collision_objects[j].primitives[0].dimensions[0] = max[0] - min[0];
+        collision_objects[j].primitives[0].dimensions[1] = max[1] - min[1];
+        collision_objects[j].primitives[0].dimensions[2] = max[2] - min[2];
+
+        collision_objects[j].primitive_poses.resize(1);
+        collision_objects[j].primitive_poses[0].position.x = centroid_wrt_base_link.point.x;
+        collision_objects[j].primitive_poses[0].position.y = centroid_wrt_base_link.point.y;
+        collision_objects[j].primitive_poses[0].position.z = centroid_wrt_base_link.point.z;
+        collision_objects[j].primitive_poses[0].orientation.w = 1.0;
+
+        collision_objects[j].operation = collision_objects[j].ADD;*/
+
         j++;
     }
+    // planning_scene_interface.applyCollisionObjects(collision_objects);
 }

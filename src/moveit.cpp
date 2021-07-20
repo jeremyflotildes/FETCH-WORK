@@ -14,6 +14,8 @@ void moveGroup::graspObject() {
 
     moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
 
+    move_group.setPlanningTime(45.0);
+
     const robot_state::JointModelGroup* joint_model_group =
             move_group.getCurrentState()->getJointModelGroup(PLANNING_GROUP);
     
@@ -40,84 +42,121 @@ void moveGroup::graspObject() {
     std::copy(move_group.getJointModelGroupNames().begin(), move_group.getJointModelGroupNames().end(),
               std::ostream_iterator<std::string>(std::cout, ", "));
 
-    // Start the demo
-    // ^^^^^^^^^^^^^^^^^^^^^^^^^
     visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to start the demo");
 
-    // .. _move_group_interface-planning-to-pose-goal:
-    //
-    // Planning to a Pose goal
-    // ^^^^^^^^^^^^^^^^^^^^^^^
-    // We can plan a motion for this group to a desired pose for the
-    // end-effector.
-
+    // ---LOOKUP TRANSFORM BTWN CLUSTER & BASELINK---
 //    tf::TransformListener listener;
     ros::Rate rate(10.0);
-
-    tf::StampedTransform cluster_transform;
     try {
         moveGroup::listener.waitForTransform("/base_link", "/cluster_7", ros::Time(0), ros::Duration(4.0));
-        moveGroup::listener.lookupTransform("/base_link", "/cluster_7", ros::Time(0), cluster_transform);
+        moveGroup::listener.lookupTransform("/base_link", "/cluster_7", ros::Time(0), moveGroup::cluster_transform);
+        /*addCollisionObject(planning_scene_interface);*/
+        // pick(move_group);
         ROS_INFO("Goal: (%.2f, %.2f, %.2f)", cluster_transform.getOrigin().x(), cluster_transform.getOrigin().y(), cluster_transform.getOrigin().z());
     }
     catch (tf::TransformException ex) {
         ROS_ERROR("%s", ex.what());
         ros::Duration(1.0).sleep();
     }
+
+   //code for moving eef to a particular cluster
     geometry_msgs::Pose target_pose1;
+   // geometry_msgs::Pose pose_eef;
     target_pose1.orientation.x = 0.000000;
-    target_pose1.orientation.y = 0.000000;
+    target_pose1.orientation.y = 0.707;
     target_pose1.orientation.z = 0.000000;
-    target_pose1.orientation.w = 1.000000;
+    target_pose1.orientation.w = 0.707;
     
-    target_pose1.position.x = cluster_transform.getOrigin().x();
-    target_pose1.position.y = cluster_transform.getOrigin().y();
-    target_pose1.position.z = cluster_transform.getOrigin().z();
+    target_pose1.position.x = moveGroup::cluster_transform.getOrigin().x();
+    target_pose1.position.y = moveGroup::cluster_transform.getOrigin().y();
+    target_pose1.position.z = moveGroup::cluster_transform.getOrigin().z() + 0.3;
+
+    //moveGroup::listener.transformPose("gripper_link", target_pose1, pose_eef);
 
 /*    target_pose1.position.x = 0.71;
     target_pose1.position.y = 0.21;
     target_pose1.position.z = 0.81;*/
-
+    //target_pose1.header.frame_id = move_group.getEndEffectorLink();
     move_group.setPoseTarget(target_pose1);
     move_group.setGoalTolerance(0.01);
-    // Now, we call the planner to compute the plan and visualize it.
-    // Note that we are just planning, not asking move_group
-    // to actually move the robot.
+
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
 
     bool success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
 
     ROS_INFO_NAMED("tutorial", "Visualizing plan 1 (pose goal) %s", success ? "" : "FAILED");
 
-//    sleep(5.0);
+    move_group.move();
+    
+    target_pose1.position.z = moveGroup::cluster_transform.getOrigin().z() + 0.01;
+    move_group.setPoseTarget(target_pose1);
+    move_group.move();
 
+    closed_gripper();
 
-    // Visualizing plans
-    // ^^^^^^^^^^^^^^^^^
-    // We can also visualize the plan as a line with markers in RViz.
-/*    ROS_INFO_NAMED("tutorial", "Visualizing plan 1 as trajectory line");
-    visual_tools.publishAxisLabeled(target_pose1, "pose1");
-    visual_tools.publishText(text_pose, "Pose Goal", rvt::WHITE, rvt::XLARGE);
-    visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
-    visual_tools.trigger();
-    visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to continue the demo");*/
+    target_pose1.position.z = moveGroup::cluster_transform.getOrigin().z() + 0.3;
+    move_group.setPoseTarget(target_pose1);
+    move_group.move();
+}
 
-    // Moving to a pose goal
-    // ^^^^^^^^^^^^^^^^^^^^^
-    //
-    // Moving to a pose goal is similar to the step above
-    // except we now use the move() function. Note that
-    // the pose goal we had set earlier is still active
-    // and so the robot will try to move to that goal. We will
-    // not use that function in this tutorial since it is
-    // a blocking function and requires a controller to be active
-    // and report success on execution of a trajectory.
-
-    /* Uncomment below line when working with a real robot */
-    /* move_group.move(); */
+void moveGroup::lowerGripper() {
 
 }
-/* void openGripper(trajectory_msgs::JointTrajectory& posture)
+
+void moveGroup::closed_gripper() {
+    // create the action client
+    // true causes the client to spin its own thread
+    actionlib::SimpleActionClient<control_msgs::GripperCommandAction> ac("gripper_controller/gripper_action", true);
+
+    ROS_INFO("Waiting for action server to start.");
+    // wait for the action server to start
+    ac.waitForServer(); //will wait for infinite time
+
+    ROS_INFO("Action server started, sending goal.");
+    // send a goal to the action
+    control_msgs::GripperCommandGoal goal;
+    goal.command.position= 0.0;
+    goal.command.max_effort= 50.0;
+    ac.sendGoal(goal);
+
+    //wait for the action to return
+    bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+
+    if (finished_before_timeout)
+    {
+        actionlib::SimpleClientGoalState state = ac.getState();
+        ROS_INFO("Action finished: %s",state.toString().c_str());
+    }
+    else
+        ROS_INFO("Action did not finish before the time out.");
+}
+
+void moveGroup::addCollisionObject(moveit::planning_interface::PlanningSceneInterface& planning_scene_interface) {
+
+/*    std::vector<moveit_msgs::CollisionObject> collision_objects;
+    collision_objects.resize(7);
+
+    collision_objects[0].id = "cluster_7";
+    collision_objects[0].header.frame_id = "gripper_link";
+
+    collision_objects[0].primitives[0].type = collision_objects[0].primitives[0].BOX;
+    collision_objects[0].primitives[0].dimensions.resize(3);
+    collision_objects[0].primitives[0].dimensions[0] = cluster_extraction::length;
+    collision_objects[0].primitives[0].dimensions[1] = cluster_extraction::width;
+    collision_objects[0].primitives[0].dimensions[2] = cluster_extraction::height;
+
+    collision_objects[0].primitive_poses.resize(1);
+    collision_objects[0].primitive_poses[0].position.x = moveGroup::cluster_transform.getOrigin().x();
+    collision_objects[0].primitive_poses[0].position.y = moveGroup::cluster_transform.getOrigin().y();
+    collision_objects[0].primitive_poses[0].position.z = moveGroup::cluster_transform.getOrigin().z();
+    collision_objects[0].primitive_poses[0].orientation.w = 1.0;
+
+    collision_objects[0].operation = collision_objects[0].ADD;
+
+    planning_scene_interface.applyCollisionObjects(collision_objects);*/
+}
+
+ /*void moveGroup::openGripper(trajectory_msgs::JointTrajectory& posture)
 {
     posture.joint_names.resize(2);
     posture.joint_names[0] = "l_gripper_finger_link";
@@ -128,19 +167,64 @@ void moveGroup::graspObject() {
     posture.points[0].positions[0] = 0.04;
     posture.points[0].positions[1] = 0.04;
     posture.points[0].time_from_start = ros::Duration(0.5);
-    // END_SUB_TUTORIAL
+}
+
+void moveGroup::closedGripper(trajectory_msgs::JointTrajectory& posture)
+{
+    *//* Add both finger joints of robot. *//*
+    posture.joint_names.resize(2);
+    posture.joint_names[0] = "l_gripper_finger_link";
+    posture.joint_names[1] = "r_gripper_finger_link";
+
+    *//* Set them as closed. *//*
+    posture.points.resize(1);
+    posture.points[0].positions.resize(2);
+    posture.points[0].positions[0] = 0.00;
+    posture.points[0].positions[1] = 0.00;
+    posture.points[0].time_from_start = ros::Duration(0.5);
 }
 
 
-void pick(moveit::planning_interface::MoveGroupInterface& move_group) {
+void moveGroup::pick(moveit::planning_interface::MoveGroupInterface& move_group) {
+
     std::vector<moveit_msgs::Grasp> grasps;
     grasps.resize(1);
 
-    grasps[0].grasp_pose.header.frame_id = "cluster_2";
+    grasps[0].grasp_pose.header.frame_id = "gripper_link";
     tf::Quaternion orientation;
-    orientation.setRPY(-M_PI / 2, -M_PI / 4, -M_PI / 2);
-    grasps[0].grasp_pose.pose.orientation = tf::toMsg(orientation);
-    grasps[0].grasp_pose.pose.position.x = 0.415;
-    grasps[0].grasp_pose.pose.position.y = 0;
-    grasps[0].grasp_pose.pose.position.z = 0.5;
-}  */
+    //orientation.setRPY(-M_PI / 2, -M_PI / 4, -M_PI / 2);
+    orientation.setRPY(0, -1, 0); //want eef vertical pointing down
+    tf::quaternionTFToMsg(orientation, grasps[0].grasp_pose.pose.orientation);
+    grasps[0].grasp_pose.pose.position.x = moveGroup::cluster_transform.getOrigin().x(); //set eef pos to the relevant cluster
+    grasps[0].grasp_pose.pose.position.y = moveGroup::cluster_transform.getOrigin().y();
+    grasps[0].grasp_pose.pose.position.z = moveGroup::cluster_transform.getOrigin().z() + 0.5; // set eef slightly above cluster
+
+    // Setting pre-grasp approach
+    // ++++++++++++++++++++++++++
+    grasps[0].pre_grasp_approach.direction.header.frame_id = "gripper_link";
+    grasps[0].pre_grasp_approach.direction.vector.z = 1.0; //approach on z axis
+    grasps[0].pre_grasp_approach.min_distance = 0.095;
+    grasps[0].pre_grasp_approach.desired_distance = 0.115;
+
+    // Setting post-grasp retreat
+    // ++++++++++++++++++++++++++
+    grasps[0].post_grasp_retreat.direction.header.frame_id = "gripper_link";
+    grasps[0].post_grasp_retreat.direction.vector.z = 1.0;
+    grasps[0].post_grasp_retreat.min_distance = 0.1;
+    grasps[0].post_grasp_retreat.desired_distance = 0.25;
+
+    // Setting posture of eef before grasp
+    // +++++++++++++++++++++++++++++++++++
+    openGripper(grasps[0].pre_grasp_posture);
+
+    // Setting posture of eef during grasp
+    // +++++++++++++++++++++++++++++++++++
+    closedGripper(grasps[0].grasp_posture);
+
+    // Set support surface as table1.
+   // move_group.setSupportSurfaceName("table1");
+    // Call pick to pick up the object using the grasps given
+    move_group.pick("cluster_1", grasps);
+
+}
+*/
