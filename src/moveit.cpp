@@ -1,13 +1,14 @@
 //
 // Created by jeremy on 7/12/21.
-//
+// sends target poses for gripping
 
 #include "moveit.h"
 #include "cluster.h"
 
 void moveGroup::graspObject() {
-    ros::AsyncSpinner spinner(1);
-    spinner.start();
+    ros::AsyncSpinner spinner1(1);
+    spinner1.start();
+
     static const std::string PLANNING_GROUP = "arm_with_torso";
 
     moveit::planning_interface::MoveGroupInterface move_group(PLANNING_GROUP);
@@ -30,26 +31,15 @@ void moveGroup::graspObject() {
     visual_tools.publishText(text_pose, "MoveGroupInterface Demo", rvt::WHITE, rvt::XLARGE);
     visual_tools.trigger();
 
-
-    // print the name of the reference frame for this robot.
-    ROS_INFO_NAMED("tutorial", "Planning frame: %s", move_group.getPlanningFrame().c_str());
-
-    // print the name of the end-effector link for this group.
-    ROS_INFO_NAMED("tutorial", "End effector link: %s", move_group.getEndEffectorLink().c_str());
-
-    // get a list of all the groups in the robot:
-    ROS_INFO_NAMED("tutorial", "Available Planning Groups:");
-    std::copy(move_group.getJointModelGroupNames().begin(), move_group.getJointModelGroupNames().end(),
-              std::ostream_iterator<std::string>(std::cout, ", "));
-
     visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to start the demo");
 
     // ---LOOKUP TRANSFORM BTWN CLUSTER & BASELINK---
 //    tf::TransformListener listener;
     ros::Rate rate(10.0);
+    tf::StampedTransform eef_transform;
     try {
-        moveGroup::listener.waitForTransform("/base_link", "/cluster_7", ros::Time(0), ros::Duration(4.0));
-        moveGroup::listener.lookupTransform("/base_link", "/cluster_7", ros::Time(0), moveGroup::cluster_transform);
+        moveGroup::listener.waitForTransform("/base_link", "/cluster_3", ros::Time(0), ros::Duration(4.0));
+        moveGroup::listener.lookupTransform("/base_link", "/cluster_3", ros::Time(0), cluster_transform);
         /*addCollisionObject(planning_scene_interface);*/
         // pick(move_group);
         ROS_INFO("Goal: (%.2f, %.2f, %.2f)", cluster_transform.getOrigin().x(), cluster_transform.getOrigin().y(), cluster_transform.getOrigin().z());
@@ -59,54 +49,70 @@ void moveGroup::graspObject() {
         ros::Duration(1.0).sleep();
     }
 
-   //code for moving eef to a particular cluster
-    geometry_msgs::Pose target_pose1;
-   // geometry_msgs::Pose pose_eef;
-    target_pose1.orientation.x = 0.000000;
+    //---FIRST GOAL---
+    geometry_msgs::PoseStamped target_pose1;
+
+    //old goal, uses quaternions to point gripper downwards
+    /*target_pose1.orientation.x = 0;
     target_pose1.orientation.y = 0.707;
-    target_pose1.orientation.z = 0.000000;
-    target_pose1.orientation.w = 0.707;
-    
-    target_pose1.position.x = moveGroup::cluster_transform.getOrigin().x();
-    target_pose1.position.y = moveGroup::cluster_transform.getOrigin().y();
-    target_pose1.position.z = moveGroup::cluster_transform.getOrigin().z() + 0.3;
+    target_pose1.orientation.z = moveGroup::cluster_transform.getRotation().z();
+    target_pose1.orientation.w = 0.707;*/
 
-    //moveGroup::listener.transformPose("gripper_link", target_pose1, pose_eef);
+    //flip orientation so it is more ideal for fetch's gripper
+    cluster_transform.setRotation(cluster_transform.getRotation() * tf::Quaternion(tf::Vector3(1, 0, 0), M_PI_2) * tf::Quaternion(tf::Vector3(0, 0, 1), -M_PI_2));
+    //---set goal orientation---
+    target_pose1.pose.orientation.x = cluster_transform.getRotation().x();
+    target_pose1.pose.orientation.y = cluster_transform.getRotation().y();
+    target_pose1.pose.orientation.z = cluster_transform.getRotation().z();
+    target_pose1.pose.orientation.w = cluster_transform.getRotation().w();
+    //---set goal position---
+    target_pose1.pose.position.x = cluster_transform.getOrigin().x() - 0.5; //position above the object
+    target_pose1.pose.position.y = cluster_transform.getOrigin().y();
+    target_pose1.pose.position.z = cluster_transform.getOrigin().z();
 
-/*    target_pose1.position.x = 0.71;
-    target_pose1.position.y = 0.21;
-    target_pose1.position.z = 0.81;*/
-    //target_pose1.header.frame_id = move_group.getEndEffectorLink();
+    //---broadcast the first goal---, should be able to visualize in rviz, if not -- try publishing and subscribing to the pose
+    tf::TransformBroadcaster br;
+    tf::Transform goal_transform; // = cluster_transform;
+    goal_transform.setOrigin(cluster_transform.getOrigin() + tf::Vector3(0, 0, 0.5));
+    goal_transform.setRotation(cluster_transform.getRotation());
+    br.sendTransform(tf::StampedTransform(goal_transform, ros::Time::now(), "base_link", "goal"));
+
     move_group.setPoseTarget(target_pose1);
-    move_group.setGoalTolerance(0.01);
+    /*ROS_INFO("ORIENTATION: (%.2f, %.2f, %.2f, %.2f)", target_pose1.orientation.x, target_pose1.orientation.y,
+             target_pose1.orientation.z, target_pose1.orientation.w);*/
+    move_group.move(); //move robot
 
-    moveit::planning_interface::MoveGroupInterface::Plan my_plan;
-
-    bool success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-
-    ROS_INFO_NAMED("tutorial", "Visualizing plan 1 (pose goal) %s", success ? "" : "FAILED");
-
+    //---SECOND GOAL---
+    geometry_msgs::PoseStamped target_pose2 = target_pose1; //set second goal to the first goal
+    target_pose2.pose.position.z = cluster_transform.getOrigin().x() - 0.19; //position end effector for gripping (gripper will slam into table @ .getOrigin().x()
+    move_group.setPoseTarget(target_pose2);
     move_group.move();
-    
-    target_pose1.position.z = moveGroup::cluster_transform.getOrigin().z() + 0.01;
-    move_group.setPoseTarget(target_pose1);
-    move_group.move();
+    geometry_msgs::PoseStamped current_pose = move_group.getCurrentPose();
 
-    closed_gripper();
+    //check if eef is in proximity of goal and then close gripper (.move() won't block for some reason?)
+   moveGroup::gripped_object = false;
+   while(moveGroup::gripped_object == false) {
+        moveGroup::eef_listener.lookupTransform("/base_link", "gripper_link", ros::Time(0), eef_transform);
+        tf::Quaternion current_orientation = eef_transform.getRotation();
+        //ROS_INFO("Checking end effector orientation");
+        if((abs(current_orientation.y() - 0.707) < 0.001)  && ((abs(current_pose.pose.position.y - cluster_transform.getOrigin().y())) < 0.015)) {
+            closed_gripper();
+            ROS_INFO("Pointing down!");
+        }
+    }
 
-    target_pose1.position.z = moveGroup::cluster_transform.getOrigin().z() + 0.3;
-    move_group.setPoseTarget(target_pose1);
-    move_group.move();
-}
-
-void moveGroup::lowerGripper() {
+   //--THIRD GOAL---
+   target_pose1.pose.position.z = cluster_transform.getOrigin().x() - 0.3; //retreat
+   move_group.setPoseTarget(target_pose1);
+   move_group.move();
 
 }
 
 void moveGroup::closed_gripper() {
+
     // create the action client
     // true causes the client to spin its own thread
-    actionlib::SimpleActionClient<control_msgs::GripperCommandAction> ac("gripper_controller/gripper_action", true);
+    actionlib::SimpleActionClient<control_msgs::GripperCommandAction> ac("gripper_controller/gripper_action", false);
 
     ROS_INFO("Waiting for action server to start.");
     // wait for the action server to start
@@ -115,23 +121,26 @@ void moveGroup::closed_gripper() {
     ROS_INFO("Action server started, sending goal.");
     // send a goal to the action
     control_msgs::GripperCommandGoal goal;
-    goal.command.position= 0.0;
-    goal.command.max_effort= 50.0;
+    goal.command.position= 0.00;
+    goal.command.max_effort= 60.0;
     ac.sendGoal(goal);
-
     //wait for the action to return
-    bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+    bool finished_before_timeout = ac.waitForResult(ros::Duration(6.0));
+    moveGroup::gripped_object = true;
 
-    if (finished_before_timeout)
+   /* if (finished_before_timeout)
     {
         actionlib::SimpleClientGoalState state = ac.getState();
         ROS_INFO("Action finished: %s",state.toString().c_str());
+        moveGroup::gripped_object = true;
     }
-    else
+    else {
         ROS_INFO("Action did not finish before the time out.");
+        moveGroup::gripped_object = true;
+    }*/
 }
 
-void moveGroup::addCollisionObject(moveit::planning_interface::PlanningSceneInterface& planning_scene_interface) {
+//void moveGroup::addCollisionObject(moveit::planning_interface::PlanningSceneInterface& planning_scene_interface) {
 
 /*    std::vector<moveit_msgs::CollisionObject> collision_objects;
     collision_objects.resize(7);
@@ -154,19 +163,35 @@ void moveGroup::addCollisionObject(moveit::planning_interface::PlanningSceneInte
     collision_objects[0].operation = collision_objects[0].ADD;
 
     planning_scene_interface.applyCollisionObjects(collision_objects);*/
-}
+//}
 
  /*void moveGroup::openGripper(trajectory_msgs::JointTrajectory& posture)
 {
-    posture.joint_names.resize(2);
-    posture.joint_names[0] = "l_gripper_finger_link";
-    posture.joint_names[1] = "r_gripper_finger_link";
+   // create the action client
+    // true causes the client to spin its own thread
+    actionlib::SimpleActionClient<control_msgs::GripperCommandAction> ac("gripper_controller/gripper_action", false);
 
-    posture.points.resize(1);
-    posture.points[0].positions.resize(2);
-    posture.points[0].positions[0] = 0.04;
-    posture.points[0].positions[1] = 0.04;
-    posture.points[0].time_from_start = ros::Duration(0.5);
+    ROS_INFO("Waiting for action server to start.");
+    // wait for the action server to start
+    ac.waitForServer(); //will wait for infinite time
+
+    ROS_INFO("Action server started, sending goal.");
+    // send a goal to the action
+    control_msgs::GripperCommandGoal goal;
+    goal.command.position= 0.0;
+    goal.command.max_effort= 50.0;
+    ac.sendGoal(goal);
+
+    //wait for the action to return
+    bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+
+    if (finished_before_timeout)
+    {
+        actionlib::SimpleClientGoalState state = ac.getState();
+        ROS_INFO("Action finished: %s",state.toString().c_str());
+    }
+    else
+        ROS_INFO("Action did not finish before the time out.");
 }
 
 void moveGroup::closedGripper(trajectory_msgs::JointTrajectory& posture)

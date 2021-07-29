@@ -20,7 +20,7 @@
 class crop_cloud {
 public:
     pcl::PointCloud<pcl::PointXYZ>::Ptr plane_seg_cloud; //initialize new PointXYZ for plane segmentation, result for the crop will be stored here
-    void crop(sensor_msgs::PointCloud2::Ptr input_cloud);
+    void crop(pcl::PCLPointCloud2::Ptr transformed_cloud);
     crop_cloud() : plane_seg_cloud(new pcl::PointCloud<pcl::PointXYZ>){ //initialize point cloud in the constructor -- solve errors (undefined references) with linkers across c++ files
     }
 };

@@ -4,6 +4,21 @@
 
 #include "cluster.h"
 #include "moveit.h"
+
+//feature detection stuff
+#include <vector>
+#include <thread>
+
+#include <pcl/point_types.h>
+#include "tf/transform_datatypes.h"
+#include "Eigen/Core"
+#include "Eigen/Geometry"
+#include "tf_conversions/tf_eigen.h"
+#include <eigen_conversions/eigen_msg.h>
+#include <pcl/common/pca.h>
+
+
+using namespace std;
 void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extracted) { //fixed: "undefined reference to cluster_extraction::cluster" -> function requires parent class + scope operator
     // ---CREATING THE KDTREE OBJECT FOR THE SEARCH METHOD OF THE EXTRACTION---
     pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
@@ -33,37 +48,37 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
         for (const auto& idx : it->indices) {
             cloud_cluster->push_back((*cloud_extracted)[idx]); //create a new point cloud for each cluster
         }
-        cloud_cluster->width = cloud_cluster->size ();
+        cloud_cluster->width = cloud_cluster->size();
         cloud_cluster->height = 1;
         cloud_cluster->is_dense = true;
         std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size() << " data points." << std::endl;
 
         //compute + print centroid
         pcl::compute3DCentroid(*cloud_cluster, cluster_extraction::centroid);
-        std::cout << cluster_extraction::centroid << std::endl;
+        //std::cout << cluster_extraction::centroid << std::endl;
 
-        Eigen::Vector4f min;
-        Eigen::Vector4f max;
-        pcl::getMinMax3D(*cloud_cluster, min, max);
+        //compute orientation
+        pcl::PCA<pcl::PointXYZ> pca;
+        pca.setInputCloud(cloud_cluster);
+        pca.setIndices(0, 0, 1, cloud_cluster->size());
 
-        /*std::vector<float> min_vec3(cluster_extraction::min.data(), cluster_extraction::min.data() + cluster_extraction::min.rows() * cluster_extraction::min.cols());
-        std::vector<float> max_vec3(cluster_extraction::max.data(), cluster_extraction::max.data() + cluster_extraction::max.rows() * cluster_extraction::max.cols());
-        //convert to float and subtract to find dimensions, then pass dimensions to moveit.cpp -- doesn't work, undefined reference
-        cluster_extraction::length = max_vec3[0] - min_vec3[0];
-        cluster_extraction::width = max_vec3[1] - min_vec3[1];
-        cluster_extraction::height = max_vec3[2] - min_vec3[2];*/
+        Eigen::RowVector3f major_vector = pca.getEigenVectors().col(0); //major vector indicates the dominant dimension
+        //std::cout << major_vector << std::endl;
+
+        major_vector(2) = 0; //set z to 0?
+        Eigen::Quaternionf eigen_quaternionf = Eigen::Quaternionf::FromTwoVectors( Eigen::Vector3f::UnitY(), major_vector); //get quaternion from the y axis + major vector
+        tf::Quaternion tf_quaternion;
+        tf::quaternionEigenToTF(eigen_quaternionf.cast<double>(), tf_quaternion);
 
         //broadcast
         tf::Transform transform;
+
         transform.setOrigin(tf::Vector3(cluster_extraction::centroid(0), cluster_extraction::centroid(1), cluster_extraction::centroid(2)));
-        tf::Quaternion q;
-        q.setRPY(0, 0, 0);
-        transform.setRotation(q);
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "head_camera_rgb_optical_frame", "cluster_" + std::to_string(j + 1)));
-        /*br.sendTransform(
-                tf::StampedTransform(
-                        tf::Transform(tf::Quaternion(0, 0, 0, 1), tf::Vector3(0.020, 0.941, 1.005)), ros::Time::now(), "base_link", "head_camera_rgb_optical_frame"));*/
-        //tf::TransformListener listener;
+        transform.setRotation(tf_quaternion);
+
+        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "base_link", "cluster_" + std::to_string(j+1)));
+
+        /*br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "head_camera_rgb_optical_frame", "cluster_" + std::to_string(j + 1)));
 
         tf::StampedTransform transform_base_link; //transform for base_link and cluster
         geometry_msgs::PointStamped centroid_wrt_base_link; //hold the centroid point transformed with respect to base_link
@@ -74,20 +89,22 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
             base_point.point.x = centroid_vec3[0]; //essentially convert the centroid to geometry_msgs::PointStamped
             base_point.point.y = centroid_vec3[1];
             base_point.point.z = centroid_vec3[2];
+
             listener.waitForTransform("head_camera_rgb_optical_frame", "base_link", ros::Time(0), ros::Duration(0.5)); //give transform some time to be detected
             listener.transformPoint("/base_link", base_point, centroid_wrt_base_link);
             ROS_INFO("base_laser: (%.2f, %.2f. %.2f) -----> base_link: (%.2f, %.2f, %.2f) at time %.2f",
                      base_point.point.x, base_point.point.y, base_point.point.z,
                      centroid_wrt_base_link.point.x, centroid_wrt_base_link.point.y, centroid_wrt_base_link.point.z, centroid_wrt_base_link.header.stamp.toSec());
-            transform_base_link.setOrigin(tf::Vector3(centroid_wrt_base_link.point.x,centroid_wrt_base_link.point.y, centroid_wrt_base_link.point.z));
-            transform_base_link.setRotation(tf::Quaternion(0,0,0, 1));
-            br.sendTransform(tf::StampedTransform(transform_base_link, ros::Time::now(), "base_link", "cluster_" + std::to_string(j + 1)));
 
+            transform_base_link.setOrigin(tf::Vector3(centroid_wrt_base_link.point.x,centroid_wrt_base_link.point.y, centroid_wrt_base_link.point.z)); //set origin
+            transform_base_link.setRotation(tf_quaternion); //set rotation
+
+            br.sendTransform(tf::StampedTransform(transform_base_link, ros::Time::now(), "base_link", "cluster_" + std::to_string(j + 1)));
         }
         catch (tf::TransformException ex) {
             ROS_ERROR("%s", ex.what());
             ros::Duration(1.0).sleep();
-        }
+        }*/
 
 /*        //ADD CLUSTER AS OBJECT
         collision_objects[j].header.frame_id = "gripper_link";

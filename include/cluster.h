@@ -20,6 +20,9 @@
 
 #include <pcl/common/common.h>
 
+#include <Eigen/Eigenvalues>
+
+
 #ifndef CROP_PC_CLUSTER_H
 #define CROP_PC_CLUSTER_H
 class cluster_extraction {
