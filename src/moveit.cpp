@@ -38,8 +38,8 @@ void moveGroup::graspObject() {
     ros::Rate rate(10.0);
     tf::StampedTransform eef_transform;
     try {
-        moveGroup::listener.waitForTransform("/base_link", "/cluster_3", ros::Time(0), ros::Duration(4.0));
-        moveGroup::listener.lookupTransform("/base_link", "/cluster_3", ros::Time(0), cluster_transform);
+        moveGroup::listener.waitForTransform("/base_link", "/cluster_5", ros::Time(0), ros::Duration(4.0));
+        moveGroup::listener.lookupTransform("/base_link", "/cluster_5", ros::Time(0), cluster_transform);
         /*addCollisionObject(planning_scene_interface);*/
         // pick(move_group);
         ROS_INFO("Goal: (%.2f, %.2f, %.2f)", cluster_transform.getOrigin().x(), cluster_transform.getOrigin().y(), cluster_transform.getOrigin().z());
@@ -59,23 +59,27 @@ void moveGroup::graspObject() {
     target_pose1.orientation.w = 0.707;*/
 
     //flip orientation so it is more ideal for fetch's gripper
-    cluster_transform.setRotation(cluster_transform.getRotation() * tf::Quaternion(tf::Vector3(1, 0, 0), M_PI_2) * tf::Quaternion(tf::Vector3(0, 0, 1), -M_PI_2));
+    //cluster_transform.setRotation(cluster_transform.getRotation() * tf::Quaternion(tf::Vector3(1, 0, 0), M_PI_2) * tf::Quaternion(tf::Vector3(0, 0, 1), -M_PI_2));
     //---set goal orientation---
     target_pose1.pose.orientation.x = cluster_transform.getRotation().x();
     target_pose1.pose.orientation.y = cluster_transform.getRotation().y();
     target_pose1.pose.orientation.z = cluster_transform.getRotation().z();
     target_pose1.pose.orientation.w = cluster_transform.getRotation().w();
     //---set goal position---
-    target_pose1.pose.position.x = cluster_transform.getOrigin().x() - 0.5; //position above the object
+    target_pose1.pose.position.x = cluster_transform.getOrigin().x() - 0.4; //position above the object
     target_pose1.pose.position.y = cluster_transform.getOrigin().y();
-    target_pose1.pose.position.z = cluster_transform.getOrigin().z();
+    target_pose1.bepose.position.z = cluster_transform.getOrigin().z();
 
     //---broadcast the first goal---, should be able to visualize in rviz, if not -- try publishing and subscribing to the pose
-    tf::TransformBroadcaster br;
+   /* tf::TransformBroadcaster br;
     tf::Transform goal_transform; // = cluster_transform;
     goal_transform.setOrigin(cluster_transform.getOrigin() + tf::Vector3(0, 0, 0.5));
     goal_transform.setRotation(cluster_transform.getRotation());
-    br.sendTransform(tf::StampedTransform(goal_transform, ros::Time::now(), "base_link", "goal"));
+    br.sendTransform(tf::StampedTransform(goal_transform, ros::Time::now(), "base_link", "goal"));*/
+
+   //publishing pose
+   moveGroup::pub.publish(target_pose1);
+
 
     move_group.setPoseTarget(target_pose1);
     /*ROS_INFO("ORIENTATION: (%.2f, %.2f, %.2f, %.2f)", target_pose1.orientation.x, target_pose1.orientation.y,
@@ -84,9 +88,9 @@ void moveGroup::graspObject() {
 
     //---SECOND GOAL---
     geometry_msgs::PoseStamped target_pose2 = target_pose1; //set second goal to the first goal
-    target_pose2.pose.position.z = cluster_transform.getOrigin().x() - 0.19; //position end effector for gripping (gripper will slam into table @ .getOrigin().x()
-    move_group.setPoseTarget(target_pose2);
-    move_group.move();
+    target_pose2.pose.position.x = cluster_transform.getOrigin().x() - 0.19; //position end effector for gripping (gripper will slam into table @ .getOrigin().x()
+    //move_group.setPoseTarget(target_pose2);
+    //move_group.move();
     geometry_msgs::PoseStamped current_pose = move_group.getCurrentPose();
 
     //check if eef is in proximity of goal and then close gripper (.move() won't block for some reason?)
@@ -95,16 +99,17 @@ void moveGroup::graspObject() {
         moveGroup::eef_listener.lookupTransform("/base_link", "gripper_link", ros::Time(0), eef_transform);
         tf::Quaternion current_orientation = eef_transform.getRotation();
         //ROS_INFO("Checking end effector orientation");
-        if((abs(current_orientation.y() - 0.707) < 0.001)  && ((abs(current_pose.pose.position.y - cluster_transform.getOrigin().y())) < 0.015)) {
+        if((abs(current_orientation.y() - cluster_transform.getRotation().y()) < 0.001)  && ((abs(current_pose.pose.position.y - cluster_transform.getOrigin().y())) < 0.015)) {
             closed_gripper();
             ROS_INFO("Pointing down!");
         }
     }
 
    //--THIRD GOAL---
-   target_pose1.pose.position.z = cluster_transform.getOrigin().x() - 0.3; //retreat
-   move_group.setPoseTarget(target_pose1);
-   move_group.move();
+   geometry_msgs::PoseStamped target_pose3 = target_pose2;
+   target_pose3.pose.position.x = cluster_transform.getOrigin().x() - 0.3; //retreat
+   //move_group.setPoseTarget(target_pose3);
+   //move_group.move();
 
 }
 

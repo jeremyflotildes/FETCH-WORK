@@ -75,6 +75,7 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
 
         transform.setOrigin(tf::Vector3(cluster_extraction::centroid(0), cluster_extraction::centroid(1), cluster_extraction::centroid(2)));
         transform.setRotation(tf_quaternion);
+        transform.setRotation(transform.getRotation() * tf::Quaternion(tf::Vector3(1, 0, 0), M_PI_2) * tf::Quaternion(tf::Vector3(0, 0, 1), -M_PI_2));
 
         br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "base_link", "cluster_" + std::to_string(j+1)));
 

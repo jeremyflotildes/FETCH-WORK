@@ -30,10 +30,13 @@ public:
     tf::TransformListener eef_listener; //listens to the end effector's position
     tf::StampedTransform cluster_transform;
     ros::Publisher pub;
+    ros::Subscriber sub;
+    ros::NodeHandle nh;
     bool gripped_object;
 
     void graspObject(); //pipeline for bringing the gripper to objects for grasping
     void closed_gripper(); //function that closes the gripper
+    void callback();
 
     //functions from the pick and place pipeline from the moveit docs, likely unnecessary
     /*void openGripper();
@@ -42,7 +45,7 @@ public:
     void addCollisionObject(moveit::planning_interface::PlanningSceneInterface& planning_scene_interface);*/
 
     moveGroup () {
-
+        pub = nh.advertise<geometry_msgs::PointStamped>("target_pose1", 1000);
     }
 
 };
