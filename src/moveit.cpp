@@ -68,7 +68,7 @@ void moveGroup::graspObject() {
     //---set goal position---
     target_pose1.pose.position.x = cluster_transform.getOrigin().x() - 0.4; //position above the object
     target_pose1.pose.position.y = cluster_transform.getOrigin().y();
-    target_pose1.bepose.position.z = cluster_transform.getOrigin().z();
+    target_pose1.pose.position.z = cluster_transform.getOrigin().z();
 
     //---broadcast the first goal---, should be able to visualize in rviz, if not -- try publishing and subscribing to the pose
    /* tf::TransformBroadcaster br;
@@ -79,7 +79,6 @@ void moveGroup::graspObject() {
 
    //publishing pose
    moveGroup::pub.publish(target_pose1);
-
 
     move_group.setPoseTarget(target_pose1);
     /*ROS_INFO("ORIENTATION: (%.2f, %.2f, %.2f, %.2f)", target_pose1.orientation.x, target_pose1.orientation.y,
