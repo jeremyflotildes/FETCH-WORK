@@ -27,5 +27,5 @@ void planar_segmentation::extractOffPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr pl
     extract.setIndices (inliers);
     extract.setNegative (true); //false -- all inliers (the plane), true -- non-inliers (off the plane)
     //pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extracted;
-    extract.filter(*planar_segmentation::cloud_extracted);
+    extract.filter(*cloud_extracted);
 }

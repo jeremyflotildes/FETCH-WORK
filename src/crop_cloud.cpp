@@ -16,5 +16,5 @@ void crop_cloud::crop(pcl::PCLPointCloud2::Ptr transformed_cloud) {
     crop.filter(cropped_cloud_pcl);
     
     //pcl::PointCloud<pcl::PointXYZ>::Ptr plane_seg_cloud;
-    pcl::fromPCLPointCloud2(cropped_cloud_pcl, *crop_cloud::plane_seg_cloud); //convert cropped point cloud into pcl::PointXYZ to be planar segmented
+    pcl::fromPCLPointCloud2(cropped_cloud_pcl, *plane_seg_cloud); //convert cropped point cloud into pcl::PointXYZ to be planar segmented
 }

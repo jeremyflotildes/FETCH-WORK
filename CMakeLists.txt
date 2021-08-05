@@ -14,6 +14,8 @@ find_package(catkin REQUIRED COMPONENTS
         moveit_core
         moveit_ros_planning_interface
         moveit_visual_tools
+        fetch_cpp
+        common_perception
 )
 
 ## System dependencies are found with CMake's conventions
@@ -106,9 +108,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES crop_pc
-#  CATKIN_DEPENDS pcl_ros roscpp std_msgs moveit_core moveit_ros_planning_interface moveit_visual_tools
+  INCLUDE_DIRS include
+  LIBRARIES crop_pc
+  CATKIN_DEPENDS pcl_ros roscpp std_msgs moveit_core moveit_ros_planning_interface moveit_visual_tools common_perception fetch_cpp
 #  DEPENDS system_lib
 
 
@@ -187,11 +189,11 @@ include_directories(include
 # )
 
 ## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
+ install(DIRECTORY include/${PROJECT_NAME}/
+   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+   FILES_MATCHING PATTERN "*.h"
 #   PATTERN ".svn" EXCLUDE
-# )
+ )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES

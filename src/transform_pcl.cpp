@@ -23,5 +23,5 @@ void transform_pcl::transform(sensor_msgs::PointCloud2::Ptr input_cloud) {
     }
     pcl_ros::transformPointCloud(*input_cloud_pcl, *transformed_cloud, transform);
 
-    toPCLPointCloud2(*transformed_cloud, *transform_pcl::transformed_cloud_pcl); //convert transformed cloud into PCL2 for cropbox
+    toPCLPointCloud2(*transformed_cloud, *transformed_cloud_pcl); //convert transformed cloud into PCL2 for cropbox
 }

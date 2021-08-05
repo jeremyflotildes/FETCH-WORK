@@ -15,11 +15,15 @@
 #include <tf/transform_datatypes.h>
 
 #include <tf/transform_listener.h>
+#include <tf/transform_broadcaster.h>
 
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/client/terminal_state.h>
 #include "control_msgs/GripperCommandGoal.h"
 #include "control_msgs/GripperCommandAction.h"
+
+#include <fetch_cpp/PointHeadClient.h>
+#include "common_perception/OctomapBuilder.h"
 
 
 #ifndef CROP_PC_MOVEIT_H
@@ -28,14 +32,18 @@ class moveGroup {
 public:
     tf::TransformListener listener; //listens for transforms between base_link and clusters
     tf::TransformListener eef_listener; //listens to the end effector's position
+    tf::TransformListener listener_wrist;
     tf::StampedTransform cluster_transform;
     ros::Publisher pub;
     ros::Subscriber sub;
     ros::NodeHandle nh;
+    tf::TransformBroadcaster br;
     bool gripped_object;
 
     void graspObject(); //pipeline for bringing the gripper to objects for grasping
     void closed_gripper(); //function that closes the gripper
+    void open_gripper();
+    void octomap();
     void callback();
 
     //functions from the pick and place pipeline from the moveit docs, likely unnecessary

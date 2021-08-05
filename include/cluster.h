@@ -28,6 +28,8 @@
 class cluster_extraction {
 public:
     Eigen::Vector4d centroid;
+    tf::TransformBroadcaster br;
+    tf::TransformBroadcaster wrist_br;
 /*    static Eigen::Vector4f min;
     static Eigen::Vector4f max;
     static float length;

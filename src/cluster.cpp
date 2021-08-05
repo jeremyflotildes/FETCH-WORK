@@ -35,7 +35,7 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
 
     int j = 0;
     // Eigen::Vector4d centroid; --> commented out, needs to be a public variable so the moveit class can access it (from a different file) and make it a target
-    tf::TransformBroadcaster br;
+    //tf::TransformBroadcaster br; --> made a member variable to avoid problems with the broadcaster needing to clean up
     tf::TransformListener listener;
 
    /*  moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
@@ -54,7 +54,7 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
         std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size() << " data points." << std::endl;
 
         //compute + print centroid
-        pcl::compute3DCentroid(*cloud_cluster, cluster_extraction::centroid);
+        pcl::compute3DCentroid(*cloud_cluster, centroid);
         //std::cout << cluster_extraction::centroid << std::endl;
 
         //compute orientation
@@ -72,12 +72,15 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
 
         //broadcast
         tf::Transform transform;
+        //tf::Transform transform_wrist;
 
-        transform.setOrigin(tf::Vector3(cluster_extraction::centroid(0), cluster_extraction::centroid(1), cluster_extraction::centroid(2)));
+        transform.setOrigin(tf::Vector3(centroid(0), centroid(1), centroid(2)));
         transform.setRotation(tf_quaternion);
         transform.setRotation(transform.getRotation() * tf::Quaternion(tf::Vector3(1, 0, 0), M_PI_2) * tf::Quaternion(tf::Vector3(0, 0, 1), -M_PI_2));
 
         br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "base_link", "cluster_" + std::to_string(j+1)));
+        //wrist_br.sendTransform(tf::StampedTransform(transform_wrist, ros::Time::now(), "base_link", "wrist_roll_link"));
+
 
         /*br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "head_camera_rgb_optical_frame", "cluster_" + std::to_string(j + 1)));
 
