@@ -39,14 +39,14 @@ void moveGroup::graspObject() {
     tf::StampedTransform eef_transform;
     tf::StampedTransform wrist_transform;
     try {
-        listener.waitForTransform("/base_link", "/cluster_6", ros::Time(0), ros::Duration(4.0));
+        listener.waitForTransform("/base_link", "/cluster_1", ros::Time(0), ros::Duration(4.0));
         /*listener_wrist.waitForTransform("/base_link", "/wrist_roll_link", ros::Time(0), ros::Duration(4.0));*/
 
-        listener.lookupTransform("/base_link", "/cluster_6", ros::Time(0), cluster_transform);
+        listener.lookupTransform("/base_link", "/cluster_1", ros::Time(0), cluster_transform);
 /*        listener_wrist.lookupTransform("/base_link", "/wrist_roll_link", ros::Time(0), wrist_transform);*/
         /*addCollisionObject(planning_scene_interface);*/
         // pick(move_group);
-        ROS_INFO("Goal: (%.2f, %.2f, %.2f)", cluster_transform.getOrigin().x(), cluster_transform.getOrigin().y(), cluster_transform.getOrigin().z());
+        ROS_WARN("Goal: (%.2f, %.2f, %.2f)", cluster_transform.getOrigin().x(), cluster_transform.getOrigin().y(), cluster_transform.getOrigin().z());
     }
     catch (tf::TransformException ex) {
         ROS_ERROR("%s", ex.what());
@@ -116,18 +116,20 @@ void moveGroup::graspObject() {
     geometry_msgs::PoseStamped target_pose2;
     geometry_msgs::PoseStamped current_pose_1;
     open_gripper();
-    while(second == true) {
+    while(second == true) { //as the gripper moves to first target, second will be true and the following will run
         current_pose_1 = move_group.getCurrentPose();
-        ROS_INFO("Current Orientation X: %.5f, Target Orientation X: %.5f", current_pose_1.pose.orientation.x, target_pose1.pose.orientation.x);
-        ROS_INFO("Current Position X: %.5f, Target Position X: %.5f", current_pose_1.pose.position.x, target_pose1.pose.position.x);
-        if ((abs(abs(current_pose_1.pose.orientation.x) - abs(target_pose1.pose.orientation.x)) < 0.002) && (abs(current_pose_1.pose.position.x - target_pose1.pose.position.x) < 0.002) && (second == true)) {
-            ROS_INFO("Target 1 reached, waiting 4 seconds...");
+        ROS_INFO("FIRST GOAL: Current Orientation X: %.5f, Target Orientation X: %.5f", current_pose_1.pose.orientation.x, target_pose1.pose.orientation.x);
+        ROS_INFO("FIRST GOAL: Current Position X: %.5f, Target Position X: %.5f", current_pose_1.pose.position.x, target_pose1.pose.position.x);
+        if ((abs(abs(current_pose_1.pose.orientation.x) - abs(target_pose1.pose.orientation.x)) < 0.002)
+            && (abs(current_pose_1.pose.position.x - target_pose1.pose.position.x) < 0.002)
+                && (second == true)) { //only run when position and orientation are within the goal, (second == true) ensures it will only run once
+            ROS_WARN("First goal reached, waiting 4 seconds...");
             sleep(4.0);
-            ROS_INFO("Executing second trajectory!");
+            ROS_WARN("Executing second trajectory!");
             target_pose2 = target_pose1; //set second goal to the first goal
             move_to_wrist_roll.setOrigin(tf::Vector3(-0.166, 0, 0));
             cluster_transform *= move_to_wrist_roll;
-            target_pose2.pose.position.z = cluster_transform.getOrigin().z() - 0.35; //position end effector for gripping (gripper will slam into table @ .getOrigin().x()
+            target_pose2.pose.position.z = cluster_transform.getOrigin().z() - 0.36; //position end effector for gripping (gripper will slam into table @ .getOrigin().x()
             // target_pose2.header.frame_id = "/base_link";
             move_group.setPoseTarget(target_pose2);
             move_group.move();
@@ -136,34 +138,40 @@ void moveGroup::graspObject() {
     }
 
     gripped_object = false;
-    while(gripped_object == false && second == false) {
+    while(gripped_object == false && second == false) { //only run once second == false, aka after second goal is reached
         geometry_msgs::PoseStamped current_pose = move_group.getCurrentPose();
         eef_listener.lookupTransform("/base_link", "gripper_link", ros::Time(0), eef_transform);
         tf::Quaternion current_orientation = eef_transform.getRotation();
         //ROS_INFO("Checking end effector orientation");
-        if((abs(current_orientation.y() - cluster_transform.getRotation().y()) < 0.001)
-        && ((abs(current_pose.pose.position.z - target_pose2.pose.position.z)) < 0.015)) {
-            ROS_INFO("Target 2 reached, waiting 2 seconds...");
+        ROS_INFO("SECOND GOAL: Current Orientation Y: %.5f, Target Orientation Y: %.5f", current_orientation.y(), cluster_transform.getRotation().y());
+        ROS_INFO("SECOND GOAL: Current Position Z: %.5f, Target Position Z: %.5f", current_pose.pose.position.z, target_pose2.pose.position.z);
+
+        if((abs(abs(current_orientation.y()) - abs(cluster_transform.getRotation().y())) < 0.001)
+            && ((abs(current_pose.pose.position.z - target_pose2.pose.position.z)) < 0.015)) {
+            ROS_WARN("Second Goal reached, waiting 2 seconds...");
             sleep(2.0);
-            ROS_INFO("Closing gripper!");
+            ROS_WARN("Closing gripper!");
             closed_gripper();
+            ROS_WARN("Gripped object!");
         }
     }
-    geometry_msgs::PoseStamped current_pose = move_group.getCurrentPose();
+    /*geometry_msgs::PoseStamped current_pose = move_group.getCurrentPose();
     //check if eef is in proximity of goal and then close gripper (.move() won't block for some reason?)
    gripped_object = false;
    while(gripped_object == false) {
         eef_listener.lookupTransform("/base_link", "gripper_link", ros::Time(0), eef_transform);
         tf::Quaternion current_orientation = eef_transform.getRotation();
         //ROS_INFO("Checking end effector orientation");
-        if((abs(current_orientation.y() - cluster_transform.getRotation().y()) < 0.001)  && ((abs(current_pose.pose.position.y - cluster_transform.getOrigin().y())) < 0.015)) {
+        if((abs(current_orientation.y() - cluster_transform.getRotation().y()) < 0.001)
+            && ((abs(current_pose.pose.position.y - cluster_transform.getOrigin().y())) < 0.015)) {
             closed_gripper();
-            ROS_INFO("Pointing down!");
+            ROS_WARN("Pointing down!");
         }
-    }
+    }*/
 
    //--THIRD GOAL---
    if(gripped_object == true) {
+       ROS_WARN("Pulling up!");
        geometry_msgs::PoseStamped target_pose3 = target_pose2;
        target_pose3.pose.position.z = cluster_transform.getOrigin().z(); //retreat
        //target_pose3.header.frame_id = "/base_link";
@@ -190,18 +198,18 @@ void moveGroup::closed_gripper() {
     goal.command.max_effort= 60.0;
     ac.sendGoal(goal);
     //wait for the action to return
-    bool finished_before_timeout = ac.waitForResult(ros::Duration(6.0));
+    bool finished_before_timeout = ac.waitForResult(ros::Duration(3.0));
     gripped_object = true;
 
     if (finished_before_timeout)
     {
         actionlib::SimpleClientGoalState state = ac.getState();
         ROS_INFO("Action finished: %s",state.toString().c_str());
-        moveGroup::gripped_object = true;
+       gripped_object = true;
     }
     else {
         ROS_INFO("Action did not finish before the time out.");
-        moveGroup::gripped_object = true;
+        gripped_object = true;
     }
 }
 
@@ -218,7 +226,7 @@ void moveGroup::open_gripper() {
     ROS_INFO("Action server started, sending goal.");
     // send a goal to the action
     control_msgs::GripperCommandGoal goal;
-    goal.command.position= 0.10;
+    goal.command.position= 0.09;
     goal.command.max_effort= 60.0;
     ac.sendGoal(goal);
     //wait for the action to return
@@ -252,9 +260,9 @@ void moveGroup::octomap() {
     poses.push_back(Eigen::Vector3d(0.7, -0.5, 0.5 )); //top right
 */
 
-    poses.push_back(Eigen::Vector3d(0.7, -0.5, 0.1)); //middle right
+    //poses.push_back(Eigen::Vector3d(0.7, -0.5, 0.1)); //middle right
     poses.push_back(Eigen::Vector3d(0.7, 0 , 0.1)); //middle middle
-    poses.push_back(Eigen::Vector3d(0.7, 0.5, 0.1)); //middle left
+    //poses.push_back(Eigen::Vector3d(0.7, 0.5, 0.1)); //middle left
 
   /*  poses.push_back(Eigen::Vector3d(0.7, 0.5, -1.5 )); //bottom left
     poses.push_back(Eigen::Vector3d(0.7, 0 ,-1.5 )); //bottom mid
@@ -264,7 +272,7 @@ void moveGroup::octomap() {
         octomap_builder.relatively_look_around_to_build_map(poses, true);
         auto target = cluster_transform.getOrigin();
         //octomap_builder.clear_cube(target.x, target.y, target.z, side_length, side_length / 2);//clear the size of the object from the octomap. Should maybe just be the size of the gripper instead
-        octomap_builder.clear_cube(cluster_transform.getOrigin().x(), cluster_transform.getOrigin().y(), cluster_transform.getOrigin().z(), 0.1, 0.04);
+        octomap_builder.clear_cube(cluster_transform.getOrigin().x(), cluster_transform.getOrigin().y(), cluster_transform.getOrigin().z(), 0.1, 0.1);
         //box_filter.setRotation(0,0,0); any way to set rotation?
         octomap_valid = true;
     }

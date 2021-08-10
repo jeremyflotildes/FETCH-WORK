@@ -52,8 +52,8 @@ public:
             cropCloud.crop(transformPCL.transformed_cloud_pcl); //crop the input cloud from the transformed pointcloud
             extractObj.extractOffPlane(cropCloud.plane_seg_cloud); //perform planar segmentation on cropped pcl and extract objects off the plane
             extractClusters.cluster(extractObj.cloud_extracted); //pass in extracted objects for clustering
-            pcl::toPCLPointCloud2(*extractObj.cloud_extracted, output_pcl_cloud); //convert pcl of extracted objects so that it can be visualized in rviz
 
+            pcl::toPCLPointCloud2(*extractObj.cloud_extracted, output_pcl_cloud); //convert pcl of extracted objects so that it can be visualized in rviz
             sensor_msgs::PointCloud2 publish_cloud; // initialize the point cloud that will be outputted/published
             pcl_conversions::fromPCL(output_pcl_cloud, publish_cloud); //convert PCL2 -> sensor_msgs point cloud to be visualized in rviz
             publish_cloud.header.frame_id = "base_link"; //need our published cloud to have parent frame base_link!

@@ -141,7 +141,7 @@ include_directories(include
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
  add_executable(extract_node src/obj_recognition.cpp src/crop_cloud.cpp src/planar_segmentation.cpp src/cluster.cpp src/moveit.cpp src/transform_pcl.cpp include/transform_pcl.h)
-## add_executable(extract_node src/crop.cpp)
+ ##add_executable(extract_node src/crop.cpp)
  ## add_executable(tf_broadcaster src/tf_broadcaster.cpp)
 
 ## Rename C++ executable without prefix
