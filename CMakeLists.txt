@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
         moveit_visual_tools
         fetch_cpp
         common_perception
+        caddy_manipulation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -110,7 +111,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES crop_pc
-  CATKIN_DEPENDS pcl_ros roscpp std_msgs moveit_core moveit_ros_planning_interface moveit_visual_tools common_perception fetch_cpp
+  CATKIN_DEPENDS pcl_ros roscpp std_msgs moveit_core moveit_ros_planning_interface moveit_visual_tools common_perception fetch_cpp caddy_manipulation
 #  DEPENDS system_lib
 
 

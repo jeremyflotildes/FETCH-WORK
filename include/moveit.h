@@ -25,6 +25,9 @@
 #include <fetch_cpp/PointHeadClient.h>
 #include "common_perception/OctomapBuilder.h"
 
+#include "caddy_manipulation/prepare_manipulation.h"
+
+
 
 #ifndef CROP_PC_MOVEIT_H
 #define CROP_PC_MOVEIT_H
@@ -34,27 +37,41 @@ public:
     tf::TransformListener eef_listener; //listens to the end effector's position
     tf::TransformListener listener_wrist;
     tf::StampedTransform cluster_transform;
+    tf::StampedTransform gripper_transform;
     ros::Publisher pub;
     ros::Subscriber sub;
     ros::NodeHandle nh;
     tf::TransformBroadcaster br;
     bool gripped_object;
+    geometry_msgs::PoseStamped jenga_stack;
+
+    int i = 1;
+    int vertical;
+    bool reset;
+    bool free_blocks_exist = true;
 
     void graspObject(); //pipeline for bringing the gripper to objects for grasping
     void closed_gripper(); //function that closes the gripper
-    void open_gripper();
-    void octomap();
+    void open_gripper(); //function that opens gripper
+    void octomap(); //creates an octomap
+    void get_block_transform(int i); //gets the transform of a block to be picked
+    void place(int i); //gets the place goal for a blcok
+    void if_stuck(); //force fetch to reset if an error is encountered (namely goal tolerance or invalid start state)
     void callback();
 
-    //functions from the pick and place pipeline from the moveit docs, likely unnecessary
-    /*void openGripper();
-    void closedGripper(trajectory_msgs::JointTrajectory& posture);
-    void pick(moveit::planning_interface::MoveGroupInterface& move_group);
-    void addCollisionObject(moveit::planning_interface::PlanningSceneInterface& planning_scene_interface);*/
 
-    moveGroup () {
+    moveGroup (const std::string &move_group_name) {
         pub = nh.advertise<geometry_msgs::PointStamped>("target_pose1", 1000);
+        move_group = new moveit::planning_interface::MoveGroupInterface(move_group_name);
+    };
+
+    ~moveGroup()
+    {
+        delete move_group;
     }
+
+    //DECLARE the pointer
+    moveit::planning_interface::MoveGroupInterface *move_group;
 
 };
 #endif //CROP_PC_MOVEIT_H

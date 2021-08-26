@@ -36,12 +36,8 @@ public:
     subscribe_and_publish() {
         // ---PUBLISH CROPPED CLOUD---
         pub = nh.advertise<sensor_msgs::PointCloud2>("crop", 1000);
-        //pub_tf = nh.advertise<tf::Vector3>("tf", 1000);
 
-        //--SUBSCRIBE TO FETCH---
-        //while(successful_pcl = true) {
-            sub = nh.subscribe("/head_camera/depth_registered/points", 1000, &subscribe_and_publish::callback, this);
-        //}
+        sub = nh.subscribe("/head_camera/depth_registered/points", 1000, &subscribe_and_publish::callback, this);
 
     }
     void callback(sensor_msgs::PointCloud2::Ptr input_cloud) {
@@ -68,11 +64,19 @@ int main (int argc, char** argv) {
     //ros::init(argc, argv, "grasp");
 
     subscribe_and_publish sapObject;
-    moveGroup moveToCluster;
+    moveGroup moveToCluster("arm_with_torso");
+    moveToCluster.move_group->setPoseReferenceFrame("base_footprint");
+
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
-    moveToCluster.graspObject(); //call pick pipeline
+    moveToCluster.reset = true;
+    while(moveToCluster.free_blocks_exist == true && moveToCluster.reset == true) {
+        moveToCluster.graspObject(); //call pick pipeline
+    }
+    /*while(moveToCluster.reset == false) {
+        moveToCluster.if_stuck();
+    }*/
 
     ros::waitForShutdown();
     return (0);
