@@ -1,5 +1,5 @@
 <launch>
-    <param name ="/use_sim_time" value="true"/>
+    <param name ="/use_sim_time" value="false"/>
     <node
         pkg = "crop_pc" type = "extract_node" name = "extract_node" output = "screen">
     </node>

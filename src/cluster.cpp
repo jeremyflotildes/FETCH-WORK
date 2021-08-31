@@ -26,7 +26,7 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
 
     std::vector<pcl::PointIndices> cluster_indices; //vector containing one instance of PointIndices for each detected cluster
     pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-    ec.setClusterTolerance (0.015); // 1.5 cm
+    ec.setClusterTolerance (0.02); // 1.5 cm
     ec.setMinClusterSize (100);
     ec.setMaxClusterSize (25000);
     ec.setSearchMethod (tree);
@@ -55,6 +55,7 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
 
         //compute + print centroid
         pcl::compute3DCentroid(*cloud_cluster, centroid);
+        ROS_INFO("Centroid computed");
         //std::cout << cluster_extraction::centroid << std::endl;
 
         //compute orientation
@@ -75,10 +76,14 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
         //tf::Transform transform_wrist;
 
         transform.setOrigin(tf::Vector3(centroid(0), centroid(1), centroid(2)));
+        ROS_INFO("Setting transform origin to the centroid");
         transform.setRotation(tf_quaternion);
         transform.setRotation(transform.getRotation() * tf::Quaternion(tf::Vector3(1, 0, 0), M_PI_2) * tf::Quaternion(tf::Vector3(0, 0, 1), -M_PI_2));
+        ROS_INFO("Setting transform orientation");
 
+        ros::spinOnce();
         br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "base_link", "cluster_" + std::to_string(j+1)));
+        ROS_INFO("Sending transforms!");
         //wrist_br.sendTransform(tf::StampedTransform(transform_wrist, ros::Time::now(), "base_link", "wrist_roll_link"));
 
 
@@ -129,6 +134,7 @@ void cluster_extraction::cluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_extra
 
         collision_objects[j].operation = collision_objects[j].ADD;*/
 
+        ros::spinOnce();
         j++;
     }
     // planning_scene_interface.applyCollisionObjects(collision_objects);

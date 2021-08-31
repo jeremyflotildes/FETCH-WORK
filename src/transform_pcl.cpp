@@ -10,18 +10,24 @@ void transform_pcl::transform(sensor_msgs::PointCloud2::Ptr input_cloud) {
     //pcl_conversions::toPCL(*input_cloud, *input_cloud_pcl); //convert subscribed data (sensor_msgs/PCL2) into pcl::PCL2
 
     pcl::fromROSMsg(*input_cloud, *input_cloud_pcl);
+    ROS_INFO("Converted pcl");
 
     transformed_cloud->header.frame_id = "base_link";
+    ROS_INFO("Header set to base");
 
     tf::StampedTransform transform;
     tf::TransformListener tf_listener;
     try {
+        ros::spinOnce();
         tf_listener.waitForTransform("/base_link", "/head_camera_rgb_optical_frame", ros::Time(0), ros::Duration(10.0));
         tf_listener.lookupTransform ("/base_link", "/head_camera_rgb_optical_frame", ros::Time(0), transform);
+        ROS_INFO("Looked up transform");
     } catch (tf::TransformException &ex) {
         ROS_ERROR("%s",ex.what());
+        ROS_INFO("Failed to look up transform");
     }
     pcl_ros::transformPointCloud(*input_cloud_pcl, *transformed_cloud, transform);
+    ROS_INFO("Transformed pcl");
 
     toPCLPointCloud2(*transformed_cloud, *transformed_cloud_pcl); //convert transformed cloud into PCL2 for cropbox
 }

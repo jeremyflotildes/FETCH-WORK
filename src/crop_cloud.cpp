@@ -10,8 +10,10 @@ void crop_cloud::crop(pcl::PCLPointCloud2::Ptr transformed_cloud) {
     pcl::PCLPointCloud2 cropped_cloud_pcl; //initialize the PCL2 that will be outputted from CropBox
 
     pcl::CropBox<pcl::PCLPointCloud2> crop;
-    crop.setMin(Eigen::Vector4f(0.4, -0.58, 0.52, 1.0));
-    crop.setMax(Eigen::Vector4f(0.8, 0.58, 0.82, 1.0));
+/*    crop.setMin(Eigen::Vector4f(0.4, -0.58, 0.52, 1.0));
+    crop.setMax(Eigen::Vector4f(0.8, 0.58, 0.82, 1.0));*/
+    crop.setMin(Eigen::Vector4f(-1.0, -1.0, 0.80, 1.0));
+    crop.setMax(Eigen::Vector4f(1.0, 0.5, 1.0, 1.0));
     crop.setInputCloud(transformed_cloud);
     crop.filter(cropped_cloud_pcl);
     

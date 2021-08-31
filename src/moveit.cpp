@@ -71,8 +71,9 @@ void moveGroup::graspObject() {
         ROS_INFO("FIRST GOAL: Current Position X: %.5f, Target Position X: %.5f", current_pose_1.pose.position.x, target_pose1.pose.position.x);*/
         if ((abs(abs(current_pose.pose.orientation.x) - abs(target_pose1.pose.orientation.x)) < 0.002)
         && (abs(current_pose.pose.position.x - target_pose1.pose.position.x) < 0.002) && (moving_to_above_obj == true)) { //only approach obj when position and orientation are within the goal above the obj
-            ROS_WARN("First goal reached, waiting 4 seconds...");
+            ROS_WARN("First goal reached, waiting 4 seconds then spinning...");
             sleep(4.0);
+            ros::spinOnce();
             ROS_WARN("Executing second trajectory!");
             target_pose2 = target_pose1; //set second goal to the first goal
             move_to_wrist_roll.setOrigin(tf::Vector3(-0.166, 0, 0));
@@ -271,6 +272,7 @@ void moveGroup::octomap() {
         octomap_builder.clear_cube(cluster_transform.getOrigin().x(), cluster_transform.getOrigin().y(), cluster_transform.getOrigin().z(), 0.1, 0.05);
         octomap_valid = true;
     }
+    ros::spinOnce();
     octomap_builder.clear_cube(cluster_transform.getOrigin().x(), cluster_transform.getOrigin().y(), cluster_transform.getOrigin().z(), 0.1, 0.05);
     headClient.relatively_look_at(0.7, 0, -(1.4245 - 0.8) ); //look back to the center
 }

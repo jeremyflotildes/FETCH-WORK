@@ -44,16 +44,23 @@ public:
         while(successful_pcl == true) {
             pcl::PCLPointCloud2 output_pcl_cloud;
 
+            ROS_INFO("Transforming");
             transformPCL.transform(input_cloud); //transform the point cloud to base_link
+            ROS_INFO("Cropping");
             cropCloud.crop(transformPCL.transformed_cloud_pcl); //crop the input cloud from the transformed pointcloud
+            ROS_INFO("Extracting");
             extractObj.extractOffPlane(cropCloud.plane_seg_cloud); //perform planar segmentation on cropped pcl and extract objects off the plane
+            ROS_INFO("Clustering");
             extractClusters.cluster(extractObj.cloud_extracted); //pass in extracted objects for clustering
 
             pcl::toPCLPointCloud2(*extractObj.cloud_extracted, output_pcl_cloud); //convert pcl of extracted objects so that it can be visualized in rviz
             sensor_msgs::PointCloud2 publish_cloud; // initialize the point cloud that will be outputted/published
             pcl_conversions::fromPCL(output_pcl_cloud, publish_cloud); //convert PCL2 -> sensor_msgs point cloud to be visualized in rviz
             publish_cloud.header.frame_id = "base_link"; //need our published cloud to have parent frame base_link!
+            ROS_INFO("Setting point cloud header to base_link!");
+            ros::spinOnce();
             pub.publish(publish_cloud);
+            ROS_INFO("Publishing point cloud!");
             successful_pcl = false; //boolean that ensures the callback is only run once, necessary to prevent freezing
         }
     }
@@ -62,13 +69,14 @@ public:
 int main (int argc, char** argv) {
     ros::init(argc, argv, "crop_node");
     //ros::init(argc, argv, "grasp");
+    ros::AsyncSpinner spinner(1);
+    spinner.start();
 
     subscribe_and_publish sapObject;
     moveGroup moveToCluster("arm_with_torso");
     moveToCluster.move_group->setPoseReferenceFrame("base_footprint");
 
-    ros::AsyncSpinner spinner(1);
-    spinner.start();
+
 
     moveToCluster.reset = true;
     while(moveToCluster.free_blocks_exist == true && moveToCluster.reset == true) {
@@ -78,6 +86,7 @@ int main (int argc, char** argv) {
         moveToCluster.if_stuck();
     }*/
 
+    ros::spin();
     ros::waitForShutdown();
     return (0);
 }
