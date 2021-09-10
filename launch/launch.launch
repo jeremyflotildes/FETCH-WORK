@@ -1,24 +1,14 @@
 <launch>
-    <param name ="/use_sim_time" value="false"/>
+    <param name ="/use_sim_time" value="true"/>
     <node
         pkg = "crop_pc" type = "extract_node" name = "extract_node" output = "screen">
     </node>
     <param name="scale_linear" value="2" type="double"/>
     <param name="scale_angular" value="2" type="double"/>
-    <!--<node pkg="crop_pc" type = "tf_broadcaster" args="/cluster" name="tf_broadcaster"></node>-->
+    <param name= "/move_group/trajectory_execution/allowed_start_tolerance" value="0.0"/> <!--prevents "invalid trajectory: start point deviates from current robot state more than 0.01" from freezing the robot-->
+    <param name = "/move_group/trajectory_execution/allowed_execution_duration_scaling" value = "4.0"/>
+    <param name = "/move_group/trajectory_execution/execution_duration_monitoring" value = "false"/>
+
     <node pkg="crop_pc" type="extract_node"
           args="/cluster_1" name="extract_node1"></node>
-    <node pkg="crop_pc" type="extract_node"
-          args="/cluster_2" name="extract_node2" />
-    <node pkg="crop_pc" type="extract_node"
-          args="/cluster_3" name="extract_node3" />
-    <node pkg="crop_pc" type="extract_node"
-          args="/cluster_4" name="extract_node4" />
-    <node pkg="crop_pc" type="extract_node"
-          args="/cluster_5" name="extract_node5" />
-    <node pkg="crop_pc" type="extract_node"
-          args="/cluster_6" name="extract_node6" />
-    <node pkg="crop_pc" type="extract_node"
-          args="/cluster_7" name="extract_node7" />
-
 </launch>

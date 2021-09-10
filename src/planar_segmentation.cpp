@@ -15,7 +15,7 @@ void planar_segmentation::extractOffPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr pl
     // Mandatory
     seg.setModelType (pcl::SACMODEL_PLANE);
     seg.setMethodType (pcl::SAC_RANSAC);
-    seg.setDistanceThreshold (0.02);
+    seg.setDistanceThreshold (0.01);
     seg.setInputCloud (plane_seg_cloud);
     seg.segment (*inliers, *coefficients);
 

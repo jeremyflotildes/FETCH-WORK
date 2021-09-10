@@ -58,7 +58,7 @@ public:
             pcl_conversions::fromPCL(output_pcl_cloud, publish_cloud); //convert PCL2 -> sensor_msgs point cloud to be visualized in rviz
             publish_cloud.header.frame_id = "base_link"; //need our published cloud to have parent frame base_link!
             ROS_INFO("Setting point cloud header to base_link!");
-            ros::spinOnce();
+            //ros::spinOnce();
             pub.publish(publish_cloud);
             ROS_INFO("Publishing point cloud!");
             successful_pcl = false; //boolean that ensures the callback is only run once, necessary to prevent freezing
@@ -86,7 +86,7 @@ int main (int argc, char** argv) {
         moveToCluster.if_stuck();
     }*/
 
-    ros::spin();
+    //ros::spin();
     ros::waitForShutdown();
     return (0);
 }

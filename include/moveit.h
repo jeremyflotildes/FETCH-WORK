@@ -27,8 +27,6 @@
 
 #include "caddy_manipulation/prepare_manipulation.h"
 
-
-
 #ifndef CROP_PC_MOVEIT_H
 #define CROP_PC_MOVEIT_H
 class moveGroup {
@@ -56,7 +54,6 @@ public:
     void octomap(); //creates an octomap
     void get_block_transform(int i); //gets the transform of a block to be picked
     void place(int i); //gets the place goal for a blcok
-    void if_stuck(); //force fetch to reset if an error is encountered (namely goal tolerance or invalid start state)
     void callback();
 
 
